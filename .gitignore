@@ -1,2 +1,10 @@
+# Python
 __pycache__/
 *.pyc
+
+# Java (Maven/Gradle): código gerado pelo slice2java e jars ficam em target/
+target/
+build/
+.gradle/
+*.class
+*.jar
