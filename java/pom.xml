@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>br.ufg.sd</groupId>
+    <artifactId>printer-java</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Compila para Java 17, então roda em JDK 17 ou 21. -->
+        <maven.compiler.release>17</maven.compiler.release>
+        <!-- Mesma série do lado Python (python3-zeroc-ice 3.7.10). -->
+        <ice.version>3.7.10</ice.version>
+        <!-- Única fonte da interface: o Printer.ice da raiz do repositório. -->
+        <slice.file>${project.basedir}/../Printer.ice</slice.file>
+        <slice.outdir>${project.build.directory}/generated-sources/slice</slice.outdir>
+    </properties>
+
+    <dependencies>
+        <!-- Runtime Java do Ice, baixado do Maven Central (não versionamos jars). -->
+        <dependency>
+            <groupId>com.zeroc</groupId>
+            <artifactId>ice</artifactId>
+            <version>${ice.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 1) Gera o código Java a partir do Slice com slice2java (fase generate-sources). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>slice2java</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${slice.outdir}"/>
+                                <exec executable="slice2java" failonerror="true">
+                                    <arg value="--output-dir"/>
+                                    <arg value="${slice.outdir}"/>
+                                    <arg value="${slice.file}"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 2) Inclui o código gerado na compilação. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-slice-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration>
+                            <sources><source>${slice.outdir}</source></sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Versão fixa do compilador: a padrão do Maven 3.8 (3.1) ignora o "release". -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+
+            <!-- 3) Empacota tudo (nosso código + runtime do Ice) num jar único:
+                 target/printer-java.jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <finalName>printer-java</finalName>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
